@@ -126,6 +126,12 @@
             top: 40px;
         }
         #floating-header {
+            position: sticky;
+            top: 0;
+            background-color: #1f2937;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            padding: 0.5rem;
+            transform: translateY(-100%);
             transition: transform 0.3s ease-in-out;
             z-index: 900;
         }
@@ -137,7 +143,7 @@
 <body class="text-white p-4 sm:p-6 lg:p-8">
 
     <!-- Floating Header -->
-    <div id="floating-header" class="fixed top-0 left-0 right-0 bg-gray-800 shadow-lg p-2 transform -translate-y-full">
+    <div id="floating-header" class="transform -translate-y-full">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <span class="font-dossier text-yellow-200">Current Turn:</span>
             <div id="floating-player-info" class="leader-item flex items-center gap-2">
@@ -243,6 +249,7 @@
             let totalAttempts = 0;
             let correctPlacements = 0;
             let round = 1;
+            let gameIsOver = false;
 
             let soundsReady = false;
             const successSound = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
@@ -279,6 +286,7 @@
             };
 
             const updateFloatingHeader = () => {
+                if (gameIsOver) return;
                 const student = students[currentPlayerIndex];
                 const data = playerData[student.id];
                 floatingPlayerInfo.innerHTML = `
@@ -302,9 +310,12 @@
                 for (let i = 1; i <= students.length; i++) {
                     const nextIndex = (currentPlayerIndex + i) % students.length;
                     if (playerData[students[nextIndex].id].lives > 0) {
-                        if (nextIndex < startingPlayerIndex) {
+                        if (nextIndex < startingPlayerIndex && round > 1) { // Increment round only after a full cycle
                             round++;
                             roundCounter.textContent = round;
+                        } else if (startingPlayerIndex === students.length -1 && nextIndex === 0) {
+                             round++;
+                             roundCounter.textContent = round;
                         }
                         currentPlayerIndex = nextIndex;
                         nextPlayerFound = true;
@@ -319,6 +330,8 @@
             };
 
             const endGame = (isWin) => {
+                if (gameIsOver) return;
+                gameIsOver = true;
                 const title = document.getElementById('final-modal-title');
                 const subtitle = document.getElementById('final-modal-subtitle');
                 const finalLeaderboard = document.getElementById('final-leaderboard');
@@ -365,6 +378,9 @@
             const completeGame = () => {
                 completeBtn.disabled = true;
                 const remainingCards = Array.from(evidencePile.querySelectorAll('.evidence-card'));
+                if (remainingCards.length === 0) return;
+                
+                let completedAnimations = 0;
                 remainingCards.forEach(card => card.draggable = false);
 
                 remainingCards.forEach((card, index) => {
@@ -398,13 +414,13 @@
                                 card.style.opacity = '1';
                                 card.classList.add('placed-clue');
                                 
-                                correctPlacements++;
-                                if (correctPlacements === clues.length) {
+                                completedAnimations++;
+                                if (completedAnimations === remainingCards.length) {
                                    setTimeout(() => endGame(true), 500);
                                 }
                             }, { once: true });
                         }
-                    }, index * 150);
+                    }, index * 100);
                 });
             };
 
@@ -446,6 +462,7 @@
 
             caseFilesGrid.addEventListener('drop', (e) => {
                 e.preventDefault();
+                if (gameIsOver) return;
                 const dropZone = e.target.closest('.case-file');
                 if (!dropZone || !draggedCard) return;
 
