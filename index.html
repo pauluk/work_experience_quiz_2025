@@ -208,6 +208,10 @@
     </div>
     <div id="toast-notification"></div>
 
+    <footer class="text-center mt-8">
+        <p class="text-xs text-gray-500">v.1.0</p>
+    </footer>
+
     <script>
         const students = [
             { id: 'jaiden', name: 'Jaiden', avatarIcon: 'sports_basketball', avatarColor: 'text-orange-400' },
@@ -415,8 +419,8 @@
                                 card.style.opacity = '1';
                                 card.classList.add('placed-clue');
                                 
-                                completedAnimations++;
-                                if (completedAnimations === remainingCards.length) {
+                                correctPlacements++;
+                                if (correctPlacements === clues.length) {
                                    setTimeout(() => endGame(true), 500);
                                 }
                             }, { once: true });
