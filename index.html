@@ -34,8 +34,8 @@
             border: 2px dashed #6b7280;
             border-radius: 0.5rem;
             transition: background-color 0.3s, border-color 0.3s;
-            min-height: 90px; /* Made smaller */
-            padding: 0.5rem; /* Reduced padding */
+            min-height: 90px;
+            padding: 0.5rem;
         }
         .case-file.drag-over {
             background-color: #4b5563;
@@ -45,7 +45,7 @@
             background-color: rgba(255,255,255,0.05);
             border: 1px solid #4b5563;
             border-radius: 0.25rem;
-            min-height: 34px; /* Made smaller */
+            min-height: 34px;
             margin-top: 0.25rem;
             padding: 0.25rem;
         }
@@ -54,7 +54,7 @@
             opacity: 0.9;
             cursor: default !important;
         }
-        .placed-clue p { font-size: 0.8rem; } /* Smaller text */
+        .placed-clue p { font-size: 0.8rem; }
         .correct-drop { animation: correct-animation 0.5s ease; }
         @keyframes correct-animation {
             0% { transform: scale(1); }
@@ -305,24 +305,24 @@
             };
             
             const nextTurn = () => {
-                const startingPlayerIndex = currentPlayerIndex;
+                const oldPlayerIndex = currentPlayerIndex;
                 let nextPlayerFound = false;
                 for (let i = 1; i <= students.length; i++) {
                     const nextIndex = (currentPlayerIndex + i) % students.length;
                     if (playerData[students[nextIndex].id].lives > 0) {
-                        if (nextIndex < startingPlayerIndex && round > 1) { // Increment round only after a full cycle
-                            round++;
-                            roundCounter.textContent = round;
-                        } else if (startingPlayerIndex === students.length -1 && nextIndex === 0) {
-                             round++;
-                             roundCounter.textContent = round;
-                        }
                         currentPlayerIndex = nextIndex;
                         nextPlayerFound = true;
                         break;
                     }
                 }
-                if(nextPlayerFound){
+
+                if (nextPlayerFound) {
+                    if (currentPlayerIndex < oldPlayerIndex || (oldPlayerIndex === students.length - 1 && currentPlayerIndex === 0)) {
+                         if (Object.values(playerData).some(p => p.lives > 0)) {
+                            round++;
+                            roundCounter.textContent = round;
+                         }
+                    }
                     updateTurnIndicator();
                 } else {
                     endGame(false);
@@ -376,6 +376,7 @@
             };
 
             const completeGame = () => {
+                if (gameIsOver) return;
                 completeBtn.disabled = true;
                 const remainingCards = Array.from(evidencePile.querySelectorAll('.evidence-card'));
                 if (remainingCards.length === 0) return;
