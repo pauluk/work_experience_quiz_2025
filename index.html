@@ -209,7 +209,7 @@
     <div id="toast-notification"></div>
 
     <footer class="text-center mt-8">
-        <p class="text-xs text-gray-500">v.1.0</p>
+        <p class="text-xs text-gray-500">v.1.1</p>
     </footer>
 
     <script>
@@ -251,8 +251,6 @@
             let playerData = {};
             let currentPlayerIndex;
             let totalAttempts = 0;
-            let correctPlacements = 0;
-            let round = 1;
             let gameIsOver = false;
 
             let soundsReady = false;
@@ -321,10 +319,10 @@
                 }
 
                 if (nextPlayerFound) {
-                    if (currentPlayerIndex < oldPlayerIndex || (oldPlayerIndex === students.length - 1 && currentPlayerIndex === 0)) {
+                    if (currentPlayerIndex < oldPlayerIndex) {
                          if (Object.values(playerData).some(p => p.lives > 0)) {
-                            round++;
-                            roundCounter.textContent = round;
+                            let currentRound = parseInt(roundCounter.textContent);
+                            roundCounter.textContent = currentRound + 1;
                          }
                     }
                     updateTurnIndicator();
@@ -366,8 +364,8 @@
             
             const updateStats = (isCorrect) => {
                 totalAttempts++;
-                if (isCorrect) correctPlacements++;
-                const rate = totalAttempts > 0 ? Math.round((correctPlacements / totalAttempts) * 100) : 0;
+                const placedCards = document.querySelectorAll('.placed-clue').length + (isCorrect ? 1 : 0);
+                const rate = totalAttempts > 0 ? Math.round((placedCards / totalAttempts) * 100) : 0;
                 successRateEl.textContent = `${rate}%`;
             };
             
@@ -419,8 +417,8 @@
                                 card.style.opacity = '1';
                                 card.classList.add('placed-clue');
                                 
-                                correctPlacements++;
-                                if (correctPlacements === clues.length) {
+                                completedAnimations++;
+                                if (completedAnimations === remainingCards.length) {
                                    setTimeout(() => endGame(true), 500);
                                 }
                             }, { once: true });
@@ -496,8 +494,8 @@
                         playerData[currentPlayerId].score++;
                         document.getElementById(`score-${currentPlayerId}`).textContent = playerData[currentPlayerId].score;
                         
-                        correctPlacements++;
-                        if (correctPlacements === clues.length) {
+                        const placedCardsCount = document.querySelectorAll('.placed-clue').length;
+                        if (placedCardsCount === clues.length) {
                            setTimeout(() => endGame(true), 500);
                         }
                         // Player keeps their turn on success, so no nextTurn() call here
