@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Tycoon: Modern Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+        .news-ticker-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px 0;
+            overflow: hidden;
+        }
+        .news-ticker {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            animation: ticker 60s linear infinite;
+        }
+        .news-ticker-container:hover .news-ticker {
+            animation-play-state: paused;
+        }
+        .news-item {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 30px;
+            font-size: 1rem;
+        }
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-200%); }
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            @apply px-8 py-3 rounded-lg font-bold text-white transition-all duration-300;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 hover:bg-indigo-700 shadow-md;
+        }
+        .btn-action {
+             @apply bg-blue-800 hover:bg-green-700 shadow-lg hover:shadow-xl text-lg p-4 rounded-full text-white font-bold tracking-wide transform hover:-translate-y-1 transition-all duration-300;
+        }
+        .pizza-card {
+             display: flex;
+             flex-direction: column;
+             height: 100%;
+        }
+        .pizza-card.selected {
+            border: 3px solid #10B981; /* Green */
+            background-color: #f0fdf4;
+            transform: scale(1.03);
+        }
+        .modal-overlay {
+            @apply fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            @apply bg-gray-50 p-8 rounded-2xl shadow-2xl max-w-2xl w-full text-center;
+        }
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 10px;
+            background: #e5e7eb;
+            border-radius: 5px; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 22px; height: 22px;
+            background: #4f46e5;
+            cursor: pointer; border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- News Ticker -->
+    <div class="news-ticker-container text-white">
+        <div class="news-ticker" id="news-ticker-content"></div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center my-6">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-white" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Pizza Tycoon</h1>
+        </header>
+
+        <!-- Game Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+            <div class="card p-4 flex items-center"><i class="material-icons text-5xl text-blue-500 mr-4">event</i><div><p class="text-sm text-gray-500">Day</p><p id="day-counter" class="text-2xl font-bold">1 / 7</p></div></div>
+            <div class="card p-4 flex items-center"><i class="material-icons text-5xl text-green-500 mr-4">account_balance_wallet</i><div><p class="text-sm text-gray-500">Budget</p><p id="budget-display" class="text-2xl font-bold">£500</p></div></div>
+            <div class="card p-4 flex items-center"><i class="material-icons text-5xl text-yellow-500 mr-4">trending_up</i><div><p class="text-sm text-gray-500">Total Profit</p><p id="total-profit" class="text-2xl font-bold">£0</p></div></div>
+            <div class="card p-4 flex items-center"><i id="weather-icon" class="material-icons text-5xl text-orange-500 mr-4">wb_sunny</i><div><p class="text-sm text-gray-500">Forecast</p><p id="weather-text" class="text-2xl font-bold">Sunny</p></div></div>
+        </div>
+
+        <!-- Main Game Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div class="card p-6">
+                    <h2 class="text-3xl font-bold mb-2 text-center">1. Choose Today's Special!</h2>
+                    <div class="card p-4 mb-4 bg-indigo-50 border border-indigo-200">
+                        <p class="text-sm text-gray-500 text-center font-semibold">Today's Riddle:</p>
+                        <p id="riddle-text" class="text-center text-indigo-800 font-medium">Riddle here</p>
+                    </div>
+                    <div id="pizza-selection" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card p-6">
+                    <h2 class="text-3xl font-bold mb-4 text-center">2. Promote It!</h2>
+                    <div id="promotion-options" class="space-y-4"></div>
+                    <div class="mt-6 text-right font-bold text-xl">
+                        Spent: <span id="spent-display">£0</span>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h2 class="text-3xl font-bold mb-4 text-center">Leaderboard</h2>
+                    <ol id="leaderboard" class="list-decimal list-inside space-y-2 font-medium"></ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="text-center my-8">
+            <button id="next-day-btn" class="btn-action flex items-center justify-center mx-auto">
+                <i class="material-icons mr-2">rocket_launch</i>
+                <span id="next-day-text">Launch Day 1</span>
+            </button>
+        </div>
+
+        <!-- Accordion for Progress Chart -->
+        <div class="card mt-6">
+            <div id="accordion-header" class="p-6 cursor-pointer flex justify-between items-center">
+                <h2 class="text-3xl font-bold">7-Day Performance</h2>
+                <i id="accordion-icon" class="material-icons text-3xl transition-transform duration-300">expand_more</i>
+            </div>
+            <div id="accordion-content" class="px-6 pb-6 hidden">
+                 <div class="relative h-64 md:h-80">
+                    <canvas id="progress-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modal" class="modal-overlay hidden">
+        <div id="modal-content" class="modal-content">
+            <h2 id="modal-title" class="text-3xl font-bold mb-4"></h2>
+            <div id="modal-body" class="text-left space-y-4 text-base"></div>
+            <div id="modal-actions" class="mt-6 flex justify-center space-x-4">
+                <button id="modal-close-btn" class="btn btn-primary">Start Next Day</button>
+                <button id="download-btn" class="btn bg-gray-500 hover:bg-gray-600 hidden">Download Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let gameState = {
+                day: 0,
+                budget: 500,
+                totalProfit: 0,
+                leaderboard: JSON.parse(localStorage.getItem('pizzaTycoonLeaderboardV4')) || [],
+                selectedPizza: null,
+                promotionSpending: {},
+                dailyData: [],
+                chart: null,
+            };
+
+            const pizzas = [
+                // Classic & Supreme
+                { id: 'classic_dlx', name: 'The Classic Deluxe', type: 'Classic', baseSales: 90, baseCost: 16.5, riddleAnswer: 'Classic', description: 'The reliable choice. Pepperoni, mushrooms, peppers, and onions.' },
+                { id: 'brie_carre', name: 'The Brie Carre', type: 'Supreme', baseSales: 130, baseCost: 23.65, riddleAnswer: 'Supreme', description: 'Pure luxury. Creamy brie, prosciutto, and a drizzle of honey.' },
+                { id: 'green_garden', name: 'The Green Garden', type: 'Veggie', baseSales: 85, baseCost: 20.25, riddleAnswer: 'Veggie', description: 'A vegetarian dream with spinach, artichokes, and sun-dried tomatoes.' },
+                { id: 'spicy_sicilian', name: 'Spicy Sicilian Sting', type: 'Spicy', baseSales: 115, baseCost: 20.25, riddleAnswer: 'Spicy', description: 'A fiery mix of spicy salami, jalapeños, and hot honey.' },
+                
+                // World & Trendy
+                { id: 'dubai_choco', name: 'Dubai Chocolate Pizza', type: 'Dessert', baseSales: 80, baseCost: 24.50, riddleAnswer: 'Dessert', description: 'An opulent dessert of milk chocolate, hazelnuts, and gold leaf.' },
+                { id: 'seoul_food', name: 'The Seoul Food Pizza', type: 'Korean', baseSales: 110, baseCost: 21.50, riddleAnswer: 'Korean', description: 'A Korean BBQ blast with bulgogi beef, kimchi, and gochujang sauce.' },
+                { id: 'doner_kebab', name: 'The Doner Kebab Pizza', type: 'Street Food', baseSales: 105, baseCost: 18.00, riddleAnswer: 'Street Food', description: 'Your favourite late-night snack on a pizza, complete with garlic sauce.' },
+                { id: 'full_english', name: 'The Full English Pizza', type: 'Breakfast', baseSales: 95, baseCost: 19.50, riddleAnswer: 'Breakfast', description: 'A hearty breakfast with sausage, bacon, beans, and a fried egg.' },
+                { id: 'jerk_jackfruit', name: 'The Jackfruit Jerk Pizza', type: 'Plant-Based', baseSales: 100, baseCost: 20.00, riddleAnswer: 'Plant-Based', description: 'Spicy Caribbean flavour with pulled jackfruit and mango salsa.' },
+                { id: 'greek_gyro', name: 'The Greek Gyro Pizza', type: 'Greek', baseSales: 110, baseCost: 20.50, riddleAnswer: 'Greek', description: 'A Mediterranean marvel with gyro meat, tzatziki, and fresh veggies.' },
+                { id: 'tandoori_rave', name: 'The Tandoori Rave Pizza', type: 'Indian', baseSales: 115, baseCost: 21.00, riddleAnswer: 'Indian', description: 'Spicy tandoori chicken, cooling mint yogurt, and a vibrant flavour explosion.' },
+                { id: 'sunday_roast', name: 'The Sunday Roast Pizza', type: 'British', baseSales: 100, baseCost: 22.00, riddleAnswer: 'British', description: 'All the best bits of a roast dinner, including a gravy base!' },
+                { id: 'elote_loco', name: 'The Elote Loco Pizza', type: 'Mexican', baseSales: 110, baseCost: 19.00, riddleAnswer: 'Mexican', description: 'Zesty Mexican street corn with cheese, lime, and a hint of chili.' }
+            ];
+
+            const promotions = [
+                { id: 'social', name: 'Social Media', maxSpend: 150, impact: 1.5, icon: 'group' },
+                { id: 'radio', name: 'Radio Ads', maxSpend: 100, impact: 1.3, icon: 'radio' },
+                { id: 'tv', name: 'TV Commercial', maxSpend: 250, impact: 2.0, icon: 'tv' },
+                { id: 'tasting', name: 'In-store Tasting', maxSpend: 200, impact: 1.8, icon: 'tapas' },
+            ];
+            
+            const newsItems = [
+                { text: "Sweet tooths unite! A viral video about dessert pizzas is trending.", effect: { type: 'Dessert', multiplier: 1.7 }, icon: 'celebration' },
+                { text: "Can you handle the heat? A chilli-eating contest is in town, making spicy food popular.", effect: { type: 'Spicy', multiplier: 1.6 }, icon: 'local_fire_department' },
+                { text: "Gourmet food critic praises luxury ingredients. Sales of high-end pizzas are soaring!", effect: { type: 'Supreme', multiplier: 1.5 }, icon: 'star' },
+                { text: "K-Pop superstar spotted eating pizza in London! Korean food trend explodes.", effect: { type: 'Korean', multiplier: 1.8 }, icon: 'music_note' },
+                { text: "Late-night munchies on the rise, people craving classic street food flavours.", effect: { type: 'Street Food', multiplier: 1.4 }, icon: 'fastfood' },
+                { text: "'Brunch is the new dinner' says magazine, breakfast food sales skyrocket.", effect: { type: 'Breakfast', multiplier: 1.5 }, icon: 'bakery_dining' },
+                { text: "Veganuary continues to break records! Plant-based options are in high demand.", effect: { type: 'Plant-Based', multiplier: 1.6 }, icon: 'eco' },
+                { text: "Travel shows inspire a craze for Greek island holidays and food!", effect: { type: 'Greek', multiplier: 1.6 }, icon: 'flight' },
+                { text: "A top Bollywood movie is a UK box office smash, sparking interest in Indian cuisine.", effect: { type: 'Indian', multiplier: 1.7 }, icon: 'theaters' },
+                { text: "Nostalgia is in! Diners are flocking to traditional British comfort food.", effect: { type: 'British', multiplier: 1.5 }, icon: 'home' },
+                { text: "Mexican food festival is a hit, introducing new spicy and zesty flavours to the public.", effect: { type: 'Mexican', multiplier: 1.6 }, icon: 'flag' },
+                { text: "Economic downturn makes customers price-sensitive.", effect: { type: 'all', multiplier: 0.8 }, icon: 'trending_down' },
+                { text: "Local food festival this weekend! Foot traffic expected to double.", effect: { type: 'all', multiplier: 1.4 }, icon: 'festival' },
+            ];
+
+            const weatherConditions = [
+                { name: 'Scorching Heatwave', icon: 'whatshot', effect: { type: 'Veggie', multiplier: 1.3 } },
+                { name: 'Sunny Skies', icon: 'wb_sunny', effect: { type: 'Classic', multiplier: 1.2 } },
+                { name: 'Chilly Day', icon: 'ac_unit', effect: { type: 'Supreme', multiplier: 1.4 } },
+                { name: 'Rainy Weather', icon: 'water_drop', effect: { type: 'all', multiplier: 1.1 } },
+            ];
+
+            const riddles = [
+                { text: "I'm a sweet, golden dream, a luxurious, chocolatey stream. What am I?", answer: 'Dessert' },
+                { text: "I bite with fire, though I have no teeth. My flavor is bold, bringing joyful grief. What am I?", answer: 'Spicy' },
+                { text: "I am the finest, a luxurious bite. With gourmet toppings, I am pure delight.", answer: 'Supreme' },
+                { text: "I bring a funky ferment and a sweet, spicy heat from a land of morning calm. What am I?", answer: 'Korean' },
+                { text: "I'm a late-night legend, spinning on a stand, now laid flat on a doughy land. What am I?", answer: 'Street Food' },
+                { text: "I'm the start of the day, with sausage and more, served in a circle you've not seen before. What am I?", answer: 'Breakfast' },
+                { text: "I wear a crown of spice from a sunny isle, but my 'meat' has never walked a mile. What am I?", answer: 'Plant-Based' },
+                { text: "I speak of ancient myths and sunny shores, with yogurt and meat behind my doors. What am I?", answer: 'Greek' },
+                { text: "From a clay oven's heat, my spices sing a fiery, flavourful thing. What am I?", answer: 'Indian' },
+                { text: "A family meal, a nation's pride, with gravy and yorkshires on the side. What am I?", answer: 'British' },
+                { text: "I'm a cob on the grill, with cheese and with lime, a street food star that's truly sublime. What am I?", answer: 'Mexican' },
+            ];
+
+            const DOM = {
+                dayCounter: document.getElementById('day-counter'),
+                budgetDisplay: document.getElementById('budget-display'),
+                totalProfit: document.getElementById('total-profit'),
+                pizzaSelection: document.getElementById('pizza-selection'),
+                promotionOptions: document.getElementById('promotion-options'),
+                spentDisplay: document.getElementById('spent-display'),
+                leaderboard: document.getElementById('leaderboard'),
+                nextDayBtn: document.getElementById('next-day-btn'),
+                nextDayText: document.getElementById('next-day-text'),
+                newsTickerContent: document.getElementById('news-ticker-content'),
+                riddleText: document.getElementById('riddle-text'),
+                weatherIcon: document.getElementById('weather-icon'),
+                weatherText: document.getElementById('weather-text'),
+                modal: document.getElementById('modal'),
+                modalTitle: document.getElementById('modal-title'),
+                modalBody: document.getElementById('modal-body'),
+                modalCloseBtn: document.getElementById('modal-close-btn'),
+                downloadBtn: document.getElementById('download-btn'),
+                chartCanvas: document.getElementById('progress-chart'),
+                accordionHeader: document.getElementById('accordion-header'),
+                accordionContent: document.getElementById('accordion-content'),
+                accordionIcon: document.getElementById('accordion-icon'),
+            };
+
+            function init() {
+                renderPromotions();
+                renderLeaderboard();
+                initChart();
+                startNewDay();
+            }
+
+            function initChart() {
+                const ctx = DOM.chartCanvas.getContext('2d');
+                gameState.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Daily Profit (£)',
+                            data: [],
+                            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        return '£' + value;
+                                    }
+                                }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                    }
+                });
+            }
+
+            function updateChart(day, profit) {
+                gameState.chart.data.labels.push(`Day ${day}`);
+                gameState.chart.data.datasets[0].data.push(profit);
+                gameState.chart.update();
+            }
+
+            function startNewDay() {
+                if (gameState.day >= 0) renderPizzas();
+                gameState.day++;
+                gameState.budget = 500;
+                gameState.selectedPizza = null;
+                gameState.promotionSpending = {};
+                
+                document.querySelectorAll('.pizza-card.selected').forEach(c => c.classList.remove('selected'));
+                document.querySelectorAll('input[type="range"]').forEach(slider => {
+                    slider.value = 0;
+                    slider.dispatchEvent(new Event('input'));
+                });
+                
+                displayRandomNews();
+                displayRandomRiddle();
+                displayRandomWeather();
+                updateDashboard();
+                updateSpent();
+            }
+
+            function updateDashboard() {
+                DOM.dayCounter.textContent = `${gameState.day} / 7`;
+                DOM.budgetDisplay.textContent = `£${gameState.budget}`;
+                DOM.totalProfit.textContent = `£${Math.round(gameState.totalProfit)}`;
+                if (DOM.nextDayText) {
+                    DOM.nextDayText.textContent = `Launch Day ${gameState.day}`;
+                }
+            }
+            
+            function renderPizzas() {
+                DOM.pizzaSelection.innerHTML = '';
+                const classicTypes = ['Classic', 'Supreme', 'Veggie', 'Spicy', 'British'];
+                const trendyTypes = ['Dessert', 'Korean', 'Street Food', 'Breakfast', 'Plant-Based', 'Greek', 'Indian', 'Mexican'];
+
+                const classicPizzas = pizzas.filter(p => classicTypes.includes(p.type));
+                const trendyPizzas = pizzas.filter(p => trendyTypes.includes(p.type));
+
+                let availablePizzas = [];
+                availablePizzas.push(...[...classicPizzas].sort(() => 0.5 - Math.random()).slice(0, 2));
+                availablePizzas.push(...[...trendyPizzas].sort(() => 0.5 - Math.random()).slice(0, 2));
+                
+                availablePizzas.sort(() => 0.5 - Math.random());
+
+                availablePizzas.forEach(pizza => {
+                    const card = document.createElement('div');
+                    card.className = 'pizza-card card p-4 text-center cursor-pointer';
+                    card.dataset.pizzaId = pizza.id;
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-center">
+                               <i class="material-icons text-green-500 opacity-0 mr-2 transition-opacity duration-300">local_pizza</i>
+                               <h3 class="font-bold text-lg">${pizza.name}</h3>
+                            </div>
+                            <p class="text-sm text-indigo-700 font-bold capitalize mb-2">${pizza.type}</p>
+                            <p class="text-sm text-gray-600 px-2">${pizza.description}</p>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => selectPizza(pizza, card));
+                    DOM.pizzaSelection.appendChild(card);
+                });
+            }
+
+            function renderPromotions() {
+                DOM.promotionOptions.innerHTML = '';
+                promotions.forEach(promo => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between mb-1">
+                           <label for="${promo.id}" class="flex items-center">
+                                <i class="material-icons mr-2 text-gray-600">${promo.icon}</i>
+                                <span>${promo.name}</span>
+                            </label>
+                            <span class="font-semibold text-sm">£<span id="${promo.id}-cost">0</span></span>
+                        </div>
+                        <input type="range" id="${promo.id}" min="0" max="${promo.maxSpend}" value="0" step="10">
+                    `;
+                    const slider = div.querySelector('input[type="range"]');
+                    const costDisplay = div.querySelector(`#${promo.id}-cost`);
+                    slider.addEventListener('input', (e) => {
+                        const cost = parseInt(e.target.value);
+                        gameState.promotionSpending[promo.id] = cost;
+                        costDisplay.textContent = cost;
+                        updateSpent();
+                    });
+                    DOM.promotionOptions.appendChild(div);
+                });
+            }
+
+            function renderLeaderboard() {
+                DOM.leaderboard.innerHTML = '';
+                const sortedScores = [...gameState.leaderboard].sort((a, b) => b.profit - a.profit).slice(0, 5);
+                if (sortedScores.length === 0) {
+                    DOM.leaderboard.innerHTML = '<li class="text-gray-500">No scores yet!</li>';
+                } else {
+                    sortedScores.forEach((score, index) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="font-semibold">${index + 1}. ${score.name}</span> - £${Math.round(score.profit)}`;
+                        DOM.leaderboard.appendChild(li);
+                    });
+                }
+            }
+
+            function displayRandomNews() {
+                DOM.newsTickerContent.innerHTML = '';
+                const shuffledNews = [...newsItems].sort(() => 0.5 - Math.random());
+                shuffledNews.forEach(item => {
+                    const newsEl = document.createElement('div');
+                    newsEl.className = 'news-item';
+                    newsEl.innerHTML = `<i class="material-icons mr-2">${item.icon}</i> ${item.text}`;
+                    newsEl.dataset.effect = JSON.stringify(item.effect);
+                    DOM.newsTickerContent.appendChild(newsEl);
+                });
+                shuffledNews.forEach(item => {
+                     const newsEl = document.createElement('div');
+                    newsEl.className = 'news-item';
+                    newsEl.innerHTML = `<i class="material-icons mr-2">${item.icon}</i> ${item.text}`;
+                    newsEl.dataset.effect = JSON.stringify(item.effect);
+                    DOM.newsTickerContent.appendChild(newsEl);
+                });
+            }
+            
+            function displayRandomWeather() {
+                const randomWeather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+                DOM.weatherText.textContent = randomWeather.name;
+                DOM.weatherIcon.textContent = randomWeather.icon;
+                DOM.weatherIcon.dataset.effect = JSON.stringify(randomWeather.effect);
+            }
+
+            function displayRandomRiddle() {
+                const randomRiddle = riddles[Math.floor(Math.random() * riddles.length)];
+                DOM.riddleText.textContent = randomRiddle.text;
+                DOM.riddleText.dataset.answer = randomRiddle.answer;
+            }
+
+            function selectPizza(pizza, card) {
+                gameState.selectedPizza = pizza;
+                document.querySelectorAll('.pizza-card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.querySelector('i').classList.add('opacity-0');
+                });
+                card.classList.add('selected');
+                card.querySelector('i').classList.remove('opacity-0');
+            }
+
+            function updateSpent() {
+                const totalSpent = Object.values(gameState.promotionSpending).reduce((sum, cost) => sum + cost, 0);
+                DOM.spentDisplay.textContent = `£${totalSpent}`;
+                if (totalSpent > gameState.budget) {
+                    DOM.spentDisplay.classList.add('text-red-500');
+                    DOM.nextDayBtn.disabled = true;
+                    DOM.nextDayBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    DOM.spentDisplay.classList.remove('text-red-500');
+                    DOM.nextDayBtn.disabled = false;
+                    DOM.nextDayBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+            
+            function calculateDayEnd() {
+                if (!gameState.selectedPizza) {
+                    alert("Please choose a pizza to launch!");
+                    return;
+                }
+
+                let rationale = [];
+                let sales = gameState.selectedPizza.baseSales;
+                rationale.push(`Base sales for ${gameState.selectedPizza.name}: <strong>${sales}</strong> units.`);
+                
+                let promoMultiplier = 1.0;
+                promotions.forEach(promo => {
+                    const spend = gameState.promotionSpending[promo.id] || 0;
+                    if (spend > 0) {
+                        const spendRatio = spend / promo.maxSpend;
+                        const impact = (promo.impact - 1) * spendRatio;
+                        promoMultiplier += impact;
+                        rationale.push(`Promo '${promo.name}' added a <strong>x${(1 + impact).toFixed(2)}</strong> multiplier.`);
+                    }
+                });
+                sales *= promoMultiplier;
+
+                const newsEffect = JSON.parse(document.querySelector('#news-ticker-content .news-item').dataset.effect);
+                if (newsEffect.type === 'all' || newsEffect.type === gameState.selectedPizza.type) {
+                    sales *= newsEffect.multiplier;
+                    rationale.push(`Market News gave a <strong>x${newsEffect.multiplier}</strong> boost!`);
+                }
+
+                const weatherEffect = JSON.parse(DOM.weatherIcon.dataset.effect);
+                if (weatherEffect.type === 'all' || weatherEffect.type === gameState.selectedPizza.type) {
+                    sales *= weatherEffect.multiplier;
+                    rationale.push(`The weather forecast added a <strong>x${weatherEffect.multiplier}</strong> lift.`);
+                }
+                
+                if (DOM.riddleText.dataset.answer === gameState.selectedPizza.type) {
+                    sales *= 1.2;
+                    rationale.push(`You solved the riddle! <strong>+20%</strong> sales bonus!`);
+                }
+
+                const finalSales = Math.round(sales);
+                const revenue = finalSales * gameState.selectedPizza.baseCost;
+                const promoCost = Object.values(gameState.promotionSpending).reduce((sum, cost) => sum + cost, 0);
+                const budgetSaved = gameState.budget - promoCost;
+                const dailyProfit = revenue - promoCost + budgetSaved;
+
+                gameState.totalProfit += dailyProfit;
+                
+                gameState.dailyData.push({
+                    day: gameState.day,
+                    pizza: gameState.selectedPizza.name,
+                    promo_spent: promoCost,
+                    daily_profit: Math.round(dailyProfit),
+                    total_profit: Math.round(gameState.totalProfit)
+                });
+
+                updateChart(gameState.day, Math.round(dailyProfit));
+                showModalResults(finalSales, revenue, promoCost, budgetSaved, dailyProfit, rationale);
+            }
+
+            function showModalResults(sales, revenue, cost, saved, profit, rationale) {
+                DOM.modalTitle.textContent = `Day ${gameState.day} Debrief`;
+                DOM.modalBody.innerHTML = `
+                    <p class="mb-4 text-center">You launched the <span class="font-bold text-indigo-600">${gameState.selectedPizza.name}</span>!</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <i class="material-icons text-3xl text-green-500">paid</i>
+                            <p class="text-sm text-gray-500">Revenue</p>
+                            <p class="font-bold text-lg">+£${Math.round(revenue)}</p>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <i class="material-icons text-3xl text-red-500">receipt_long</i>
+                            <p class="text-sm text-gray-500">Promo Cost</p>
+                            <p class="font-bold text-lg">-£${Math.round(cost)}</p>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <i class="material-icons text-3xl text-blue-500">local_pizza</i>
+                            <p class="text-sm text-gray-500">Pizzas Sold</p>
+                            <p class="font-bold text-lg">${sales}</p>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                             <i class="material-icons text-3xl text-yellow-500">savings</i>
+                            <p class="text-sm text-gray-500">Budget Saved</p>
+                            <p class="font-bold text-lg">+£${Math.round(saved)}</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-indigo-50 rounded-lg my-3 text-left">
+                        <h4 class="font-bold mb-1 text-indigo-800">Score Rationale:</h4>
+                        <ul class="list-disc list-inside text-sm space-y-1">${rationale.map(r => `<li>${r}</li>`).join('')}</ul>
+                    </div>
+
+                    <hr class="my-4">
+                    <p class="text-2xl font-bold">Daily Profit: <span class="font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit >= 0 ? '£' : '-£'}${Math.round(Math.abs(profit))}</span></p>
+                `;
+                if (gameState.day < 7) {
+                    DOM.modalCloseBtn.textContent = `Start Day ${gameState.day + 1}`;
+                } else {
+                    DOM.modalCloseBtn.textContent = 'Finish Game!';
+                }
+                DOM.modal.classList.remove('hidden');
+            }
+            
+            function endGame() {
+                DOM.modalTitle.textContent = "Game Over!";
+                DOM.modalBody.innerHTML = `
+                    <p class="text-xl mb-4">You completed 7 days! Your final profit is:</p>
+                    <p class="text-4xl font-bold text-green-600 mb-4">£${Math.round(gameState.totalProfit)}</p>
+                `;
+                DOM.modalCloseBtn.classList.add('hidden');
+                DOM.downloadBtn.classList.remove('hidden');
+
+                setTimeout(() => {
+                    const playerName = prompt("Enter your name for the leaderboard:", "Pizza Pro") || "Anonymous";
+                    if (playerName) {
+                        gameState.leaderboard.push({ name: playerName, profit: gameState.totalProfit });
+                        localStorage.setItem('pizzaTycoonLeaderboardV4', JSON.stringify(gameState.leaderboard));
+                    }
+                    resetGame();
+                }, 500);
+            }
+
+            function resetGame() {
+                alert("Thanks for playing! The game will now reset.");
+                gameState.day = 0;
+                gameState.totalProfit = 0;
+                gameState.dailyData = [];
+                if(gameState.chart) {
+                    gameState.chart.data.labels = [];
+                    gameState.chart.data.datasets[0].data = [];
+                    gameState.chart.update();
+                }
+                DOM.modal.classList.add('hidden');
+                DOM.downloadBtn.classList.add('hidden');
+                DOM.modalCloseBtn.classList.remove('hidden');
+                renderLeaderboard();
+                startNewDay();
+            }
+
+            function downloadData() {
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Day,Pizza Choice,Promotion Spend,Daily Profit,Total Profit\n";
+                gameState.dailyData.forEach(row => {
+                    csvContent += `${row.day},"${row.pizza}",${row.promo_spent},${row.daily_profit},${row.total_profit}\n`;
+                });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "pizza_tycoon_results.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            DOM.nextDayBtn.addEventListener('click', calculateDayEnd);
+            DOM.modalCloseBtn.addEventListener('click', () => {
+                DOM.modal.classList.add('hidden');
+                if (gameState.day >= 7) {
+                    endGame();
+                } else {
+                    startNewDay();
+                }
+            });
+            DOM.downloadBtn.addEventListener('click', downloadData);
+            DOM.accordionHeader.addEventListener('click', () => {
+                DOM.accordionContent.classList.toggle('hidden');
+                DOM.accordionIcon.classList.toggle('rotate-180');
+            });
+
+            init();
+        });
+    </script>
+</body>
+</html>
